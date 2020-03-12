@@ -27,9 +27,9 @@ defmodule OAuther do
     end)
   end
 
-  @spec sign(String.t(), URI.t() | String.t(), params, Credentials.t()) :: params
-  def sign(verb, url, params, %Credentials{} = creds) do
-    params = protocol_params(params, creds)
+  @spec sign(String.t(), URI.t() | String.t(), params, Credentials.t(), List.t()) :: params
+  def sign(verb, url, req_params, %Credentials{} = creds, signing_options \\ []) do
+    params = protocol_params(req_params, creds, signing_options)
     signature = signature(verb, url, params, creds)
 
     [{"oauth_signature", signature} | params]
@@ -49,13 +49,13 @@ defmodule OAuther do
     {{"Authorization", "OAuth " <> compose_header([{"realm", realm} | oauth_params])}, req_params}
   end
 
-  @spec protocol_params(params, Credentials.t()) :: params
-  def protocol_params(params, %Credentials{} = creds) do
+  @spec protocol_params(params, Credentials.t(), List.t()) :: params
+  def protocol_params(params, %Credentials{} = creds, signing_options \\ []) do
     [
       {"oauth_consumer_key", creds.consumer_key},
-      {"oauth_nonce", nonce()},
+      {"oauth_nonce", Keyword.get(signing_options, :oauth_nonce) || nonce()},
       {"oauth_signature_method", signature_method(creds.method)},
-      {"oauth_timestamp", timestamp()},
+      {"oauth_timestamp", Keyword.get(signing_options, :oauth_timestamp) || timestamp()},
       {"oauth_version", "1.0"}
       | maybe_put_token(params, creds.token)
     ]
